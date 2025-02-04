@@ -52,7 +52,7 @@ button:hover {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     margin-top: 20px;
     width: 100%;
-    max-width: 350px;
+    max-width: 250px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -93,7 +93,7 @@ button:hover {
 }
 
 #leftPanel {
-    width: 25%;
+    width: 27%;
     padding: 10px;
     background-color: #f7f7f7;
     border-right: 1px solid #ddd;
@@ -154,7 +154,7 @@ button:hover {
 .message {
     padding: 12px 18px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1.6;
     width: 100%;
     word-wrap: break-word;
@@ -164,21 +164,8 @@ button:hover {
     position: relative;
 }
 
-.message.user {
-    background-color: #0066cc;
-    color: #333;
-    align-self: flex-end;
-    max-width: 80%;
-}
-
-.message.other {
-    background-color: #e0e0e0;
-    color: #333;
-    align-self: flex-start;
-    max-width: 80%;
-}
-
 .message:hover {
     transform: scale(1.05);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    z-index: 1;
 }

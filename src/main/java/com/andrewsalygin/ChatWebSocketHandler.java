@@ -110,8 +110,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-    }
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {}
 
     private void broadcastMessageToRoom(String room, String message) throws Exception {
         for (WebSocketSession session : roomsWithUsers.getOrDefault(room, new CopyOnWriteArraySet<>())) {

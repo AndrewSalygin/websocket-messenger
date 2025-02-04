@@ -121,7 +121,7 @@
                 const messagesArray = messagesText.split("\n");
                 messagesArray.forEach(message => {
                     if (message.trim() !== "") {
-                        document.getElementById('chat').innerHTML += `<p>${message}</p>`;
+                        document.getElementById('chat').innerHTML += `<p class="message">${message}</p>`;
                     }
                 });
             }
@@ -184,7 +184,7 @@
                 let chatHTML = "";
                 messagesArray.forEach(message => {
                     if (message.trim() !== "") {
-                        chatHTML += `<p>${message}</p>`;
+                        chatHTML += `<p class="message">${message}</p>`;
                     }
                 });
                 document.getElementById('chat').innerHTML = chatHTML;
@@ -196,7 +196,7 @@
             if (event.data.startsWith("messages:")) {
                 const messagesText = event.data.substring(10);
                 const formattedMessages = messagesText.replace(/\n/g, "<br>");
-                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+                document.getElementById('chat').innerHTML += `<p class="message">${formattedMessages}</p>`;
             }
         };
 
