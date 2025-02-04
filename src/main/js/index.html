@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+</head>
+<body>
+    <h2>Введите имя:</h2>
+    <input type="text" id="usernameInput">
+    
+    <h2>Выберите комнату:</h2>
+    <button onclick="connect('room1')">Комната 1</button>
+    <button onclick="connect('room2')">Комната 2</button>
+
+    <h3>Чат</h3>
+    <div id="chat"></div>
+    <input type="text" id="messageInput">
+    <button onclick="sendMessage()">Отправить</button>
+
+    <script>
+        let socket;
+        let username = "";
+        let currentRoom = "";
+
+        function connect(room) {
+            if (!username) {
+                username = document.getElementById("usernameInput").value.trim();
+                if (!username) {
+                    alert("Введите имя!");
+                    return;
+                }
+            }
+
+            if (socket) socket.close();
+            currentRoom = room;
+            document.getElementById('chat').innerHTML = "";
+            socket = new WebSocket(`ws://localhost:8080/chat?${room}`);
+            
+            socket.onmessage = event => {
+                document.getElementById('chat').innerHTML += `<p>${event.data}</p>`;
+            };
+            
+            socket.onclose = () => console.log("Соединение закрыто");
+        }
+
+        function sendMessage() {
+            let message = document.getElementById("messageInput").value;
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                let json = JSON.stringify({username: username, message: message});
+                socket.send(json);
+                document.getElementById("messageInput").value = "";
+            }
+        }
+    </script>
+</body>
+</html>
