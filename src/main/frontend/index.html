@@ -4,39 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSocket Chat</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <h2>Введите имя:</h2>
 <input type="text" id="usernameInput">
 <button id="enterButton" onclick="enterChat()">Войти</button>
 
-<div id="rooms" style="display:none;">
-    <h2>Выберите комнату:</h2>
-    <button onclick="connect('room1')">Комната 1</button>
-    <button onclick="connect('room2')">Комната 2</button>
-</div>
+<div id="chatWrapper">
+    <div id="leftPanel">
+        <div id="rooms" style="display:none;">
+            <h2>Выберите комнату:</h2>
+            <button onclick="connect('room1')">Комната 1</button>
+            <button onclick="connect('room2')">Комната 2</button>
+        </div>
 
-<div id="users" style="display:none;">
-    <h3>Список пользователей</h3>
-    <div id="userList"></div>
-</div>
+        <div id="users" style="display:none;">
+            <h3>Список пользователей</h3>
+            <div id="userList"></div>
+        </div>
+    </div>
 
-<div id="privateChatSection" style="display:none;">
-    <h3>Личное сообщение</h3>
-    <input type="text" id="privateMessageInput" placeholder="Имя пользователя">
-    <input type="text" id="privateMessageText" placeholder="Текст сообщения">
-    <button onclick="sendPrivateMessage()">Отправить личное сообщение</button>
-    <br>
-</div>
+    <div id="rightPanel">
+        <div id="privateChatSection" style="display:none;">
+            <h3>Личное сообщение</h3>
+            <input type="text" id="privateMessageInput" placeholder="Имя пользователя">
+            <input type="text" id="privateMessageText" placeholder="Текст сообщения">
+            <button onclick="sendPrivateMessage()">Отправить личное сообщение</button>
+            <br>
+        </div>
 
-<div id="groupChatSection" style="display:none;">
-    <h3>Сообщение в группу</h3>
-    <input type="text" id="messageInput">
-    <button onclick="sendGroupMessage()">Отправить</button>
-</div>
+        <div id="groupChatSection" style="display:none;">
+            <h3>Сообщение в группу</h3>
+            <input type="text" id="messageInput">
+            <button onclick="sendGroupMessage()">Отправить</button>
+        </div>
 
-<h3 id="header-chat" style="display:none;">Чат</h3>
-<div id="chat" style="display:none;"></div>
+        <h3 id="header-chat" style="display:none;">Чат</h3>
+        <div id="chat" style="display:none;"></div>
+    </div>
+</div>
 
 <script>
     let socketForEnter;
@@ -102,6 +109,7 @@
             document.getElementById("groupChatSection").style.display = "block";
             document.getElementById("chat").style.display = "block";
             document.getElementById("header-chat").style.display = "block";
+            document.getElementById("privateChatSection").style.display = "none";
             let json = JSON.stringify({type: "get_group_messages"});
             socketForMessagingInChat.send(json);
         };
@@ -110,8 +118,12 @@
         socketForMessagingInChat.onmessage = event => {
             if (event.data.startsWith("messages:")) {
                 const messagesText = event.data.substring(10);
-                const formattedMessages = messagesText.replace(/\n/g, "<br>");
-                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+                const messagesArray = messagesText.split("\n");
+                messagesArray.forEach(message => {
+                    if (message.trim() !== "") {
+                        document.getElementById('chat').innerHTML += `<p>${message}</p>`;
+                    }
+                });
             }
         };
 
@@ -148,6 +160,7 @@
     function selectUser(selectedUser) {
         document.getElementById("privateMessageInput").value = selectedUser;
         document.getElementById("privateChatSection").style.display = "block";
+        document.getElementById("groupChatSection").style.display = "none";
         document.getElementById("chat").style.display = "block";
         document.getElementById("header-chat").style.display = "block";
         document.getElementById("chat").innerHTML = "";
@@ -167,8 +180,14 @@
         socketForPrivateMessaging.onmessage = event => {
             if (event.data.startsWith("messages:")) {
                 const messagesText = event.data.substring(10);
-                const formattedMessages = messagesText.replace(/\n/g, "<br><br>");
-                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+                const messagesArray = messagesText.split("\n");
+                let chatHTML = "";
+                messagesArray.forEach(message => {
+                    if (message.trim() !== "") {
+                        chatHTML += `<p>${message}</p>`;
+                    }
+                });
+                document.getElementById('chat').innerHTML = chatHTML;
             }
         };
 

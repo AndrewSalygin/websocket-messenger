@@ -7,8 +7,13 @@ public class UserChat {
     private String slave;
 
     public UserChat(String master, String slave) {
-        this.master = master;
-        this.slave = slave;
+        if (master.compareTo(slave) < 0) {
+            this.master = master;
+            this.slave = slave;
+        } else {
+            this.master = slave;
+            this.slave = master;
+        }
     }
 
     @Override
