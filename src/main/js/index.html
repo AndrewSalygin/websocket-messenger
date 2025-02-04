@@ -6,52 +6,184 @@
     <title>WebSocket Chat</title>
 </head>
 <body>
-    <h2>Введите имя:</h2>
-    <input type="text" id="usernameInput">
-    
+<h2>Введите имя:</h2>
+<input type="text" id="usernameInput">
+<button id="enterButton" onclick="enterChat()">Войти</button>
+
+<div id="rooms" style="display:none;">
     <h2>Выберите комнату:</h2>
     <button onclick="connect('room1')">Комната 1</button>
     <button onclick="connect('room2')">Комната 2</button>
+</div>
 
-    <h3>Чат</h3>
-    <div id="chat"></div>
+<div id="users" style="display:none;">
+    <h3>Список пользователей</h3>
+    <div id="userList"></div>
+</div>
+
+<div id="privateChatSection" style="display:none;">
+    <h3>Личное сообщение</h3>
+    <input type="text" id="privateMessageInput" placeholder="Имя пользователя">
+    <input type="text" id="privateMessageText" placeholder="Текст сообщения">
+    <button onclick="sendPrivateMessage()">Отправить личное сообщение</button>
+    <br>
+</div>
+
+<div id="groupChatSection" style="display:none;">
+    <h3>Сообщение в группу</h3>
     <input type="text" id="messageInput">
-    <button onclick="sendMessage()">Отправить</button>
+    <button onclick="sendGroupMessage()">Отправить</button>
+</div>
 
-    <script>
-        let socket;
-        let username = "";
-        let currentRoom = "";
+<h3 id="header-chat" style="display:none;">Чат</h3>
+<div id="chat" style="display:none;"></div>
 
-        function connect(room) {
-            if (!username) {
-                username = document.getElementById("usernameInput").value.trim();
-                if (!username) {
-                    alert("Введите имя!");
-                    return;
-                }
-            }
+<script>
+    let socketForEnter;
+    let socketForMessagingInChat;
+    let socketForPrivateMessaging;
+    let username = "";
+    let currentRoom = "";
+    let userList = [];
 
-            if (socket) socket.close();
-            currentRoom = room;
-            document.getElementById('chat').innerHTML = "";
-            socket = new WebSocket(`ws://localhost:8080/chat?${room}`);
-            
-            socket.onmessage = event => {
-                document.getElementById('chat').innerHTML += `<p>${event.data}</p>`;
-            };
-            
-            socket.onclose = () => console.log("Соединение закрыто");
+    function enterChat() {
+        // Проверка имени на пустоту
+        username = document.getElementById("usernameInput").value.trim();
+        if (!username) {
+            alert("Введите имя!");
+            return;
+        }
+        if (username.indexOf(",") !== -1) {
+            alert("Запятые в имени запрещены!");
+            return;
         }
 
-        function sendMessage() {
-            let message = document.getElementById("messageInput").value;
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                let json = JSON.stringify({username: username, message: message});
-                socket.send(json);
-                document.getElementById("messageInput").value = "";
+        // Выключаем возможность ввода имени
+        document.getElementById("usernameInput").disabled = true;
+        document.getElementById("enterButton").disabled = true;
+        document.getElementById("rooms").style.display = "block";
+        document.getElementById("users").style.display = "block";
+
+        if (socketForEnter) socketForEnter.close();
+
+        // Сокет для входа
+        socketForEnter = new WebSocket(`ws://localhost:8080/enter`);
+
+        // Уведомляем, что мы зашли
+        socketForEnter.onopen = () => {
+            let json = JSON.stringify({ type: "newSession", username: username });
+            socketForEnter.send(json);
+        };
+
+        // Получаем текущих пользователей, как только они зарегистрировались
+        socketForEnter.onmessage = event => {
+            if (event.data.startsWith("users:")) {
+                updateUserList(event.data.substring(6));
             }
+        };
+
+        socketForEnter.onclose = () => console.log("Соединение socketForEnter закрыто");
+    }
+
+    // Подключение к беседе
+    function connect(room) {
+        // Получаем комнату
+        currentRoom = room;
+
+        // Очищаем чат
+        document.getElementById('chat').innerHTML = "";
+
+        if (socketForMessagingInChat) socketForMessagingInChat.close();
+
+        socketForMessagingInChat = new WebSocket(`ws://localhost:8080/group-chat?room=${room}`);
+
+        // Хотим получить сообщения
+        socketForMessagingInChat.onopen = () => {
+            document.getElementById("groupChatSection").style.display = "block";
+            document.getElementById("chat").style.display = "block";
+            document.getElementById("header-chat").style.display = "block";
+            let json = JSON.stringify({type: "get_group_messages"});
+            socketForMessagingInChat.send(json);
+        };
+
+        // Получаем сообщения
+        socketForMessagingInChat.onmessage = event => {
+            if (event.data.startsWith("messages:")) {
+                const messagesText = event.data.substring(10);
+                const formattedMessages = messagesText.replace(/\n/g, "<br>");
+                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+            }
+        };
+
+        socketForMessagingInChat.onclose = () => console.log("Соединение socketForMessagingInChat закрыто");
+    }
+
+    function sendGroupMessage() {
+        let message = document.getElementById("messageInput").value;
+        if (socketForMessagingInChat && socketForMessagingInChat.readyState === WebSocket.OPEN) {
+            let json = JSON.stringify({type: "send_group_message", username: username, currentRoom: currentRoom, message: message});
+            socketForMessagingInChat.send(json);
+
+            // Очищаем ввод
+            document.getElementById("messageInput").value = "";
         }
-    </script>
+    }
+
+    function sendPrivateMessage() {
+        let recipient = document.getElementById("privateMessageInput").value;
+        let message = document.getElementById("privateMessageText").value;
+        if (socketForPrivateMessaging && socketForPrivateMessaging.readyState === WebSocket.OPEN) {
+            let json = JSON.stringify({type: "send_private_message", master: username, slave: recipient, message: message});
+            socketForPrivateMessaging.send(json);
+            document.getElementById("privateMessageText").value = "";
+        }
+    }
+
+    function updateUserList(users) {
+        userList = users.split(",");
+        let userListHTML = userList.map(user => `<button onclick="selectUser('${user}')">${user}</button><br><br>`).join("");
+        document.getElementById('userList').innerHTML = userListHTML;
+    }
+
+    function selectUser(selectedUser) {
+        document.getElementById("privateMessageInput").value = selectedUser;
+        document.getElementById("privateChatSection").style.display = "block";
+        document.getElementById("chat").style.display = "block";
+        document.getElementById("header-chat").style.display = "block";
+        document.getElementById("chat").innerHTML = "";
+        document.getElementById("privateMessageText").value = "";
+
+        if (socketForPrivateMessaging) socketForPrivateMessaging.close();
+
+        socketForPrivateMessaging = new WebSocket(`ws://localhost:8080/private-chat?master=${username}&slave=${selectedUser}`);
+
+        // Хотим получить сообщения
+        socketForPrivateMessaging.onopen = () => {
+            let json = JSON.stringify({type: "get_private_messages", master: username, slave: selectedUser});
+            socketForPrivateMessaging.send(json);
+        };
+
+        // Хотим получить сообщения
+        socketForPrivateMessaging.onmessage = event => {
+            if (event.data.startsWith("messages:")) {
+                const messagesText = event.data.substring(10);
+                const formattedMessages = messagesText.replace(/\n/g, "<br><br>");
+                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+            }
+        };
+
+        // Получаем сообщения
+        socketForEnter.onmessage = event => {
+            if (event.data.startsWith("messages:")) {
+                const messagesText = event.data.substring(10);
+                const formattedMessages = messagesText.replace(/\n/g, "<br>");
+                document.getElementById('chat').innerHTML += `<p>${formattedMessages}</p>`;
+            }
+        };
+
+        socketForEnter.onclose = () => console.log("Соединение socketForEnter закрыто");
+        socketForPrivateMessaging.onclose = () => console.log("Соединение socketForPrivateMessaging закрыто");
+    }
+</script>
 </body>
 </html>
